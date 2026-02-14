@@ -19,7 +19,7 @@ export interface Snippet {
   createdAt: number | string;
   updatedAt?: number | string;
   interviewAnswer: string;
-  syntax?: string | { _id: string; name: string };
+  syntax: string | { _id: string; name: string };
 }
 
 export type AuthContextType = {

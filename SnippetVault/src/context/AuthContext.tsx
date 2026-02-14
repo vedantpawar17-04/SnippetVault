@@ -11,7 +11,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = sessionStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -23,8 +23,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await authLogin({ email, password });
       const userData = { id: data._id, name: data.name, email: data.email };
       setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', data.token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
+      sessionStorage.setItem('token', data.token);
       return true;
     } catch (error) {
       console.error(error);
@@ -37,8 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await authRegister({ name, email, password });
       const userData = { id: data._id, name: data.name, email: data.email };
       setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', data.token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
+      sessionStorage.setItem('token', data.token);
       return true;
     } catch (error) {
       console.error(error);
@@ -49,8 +49,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     authLogout();
     setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
   };
 
   return (

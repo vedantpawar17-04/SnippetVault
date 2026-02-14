@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
 import type { Snippet } from '../types';
 import { useSnippets } from '../context/SnippetContext';
+import { useAuth } from '../context/AuthContext';
 
 interface SnippetCardProps {
   snippet: Snippet;
   onEdit: (snippet: Snippet) => void;
+  onView: (snippet: Snippet) => void;
 }
 
-const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit }) => {
+const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit, onView }) => {
   const { toggleFavorite, deleteSnippet } = useSnippets();
+  const { user } = useAuth();
   const [isCopied, setIsCopied] = useState(false);
+
+  // Check if current user is the owner of this snippet
+  const ownerId = typeof snippet.user === 'object' 
+    ? (snippet.user as any)._id || (snippet.user as any).id 
+    : snippet.user;
+  
+  const isOwner = user && ownerId === user.id;
 
   const copyCode = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -25,7 +35,17 @@ const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit }) => {
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteSnippet(snippet.id);
+    if (isOwner) {
+      deleteSnippet(snippet.id);
+    }
+  };
+
+  const handleClick = () => {
+    if (isOwner) {
+      onEdit(snippet);
+    } else {
+      onView(snippet);
+    }
   };
 
   const getLangIcon = () => (
@@ -48,18 +68,9 @@ const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit }) => {
     });
   };
 
-  const isUpdated =
-    snippet.updatedAt &&
-    snippet.createdAt &&
-    Math.abs(
-      new Date(snippet.updatedAt).getTime() -
-        new Date(snippet.createdAt).getTime()
-    ) > 60000;
-
-
   return (
     <div
-      onClick={() => onEdit(snippet)}
+      onClick={handleClick}
       className="group 
       relative 
       bg-[#0F172A] 
@@ -163,11 +174,6 @@ const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit }) => {
 
           <div className="flex items-center justify-between text-[10px] text-gray-500 font-medium">
             <span>{formatDate(snippet.createdAt)}</span>
-            {isUpdated && snippet.updatedAt && (
-              <span className="italic text-gray-600">
-                Edited {formatDate(snippet.updatedAt)}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -179,24 +185,26 @@ const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit }) => {
         </span>
 
 
-        <button
-          title="Delete"
-          onClick={handleDelete}
-          className="p-1.5 text-gray-600 hover:text-red-400 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" 
-          width="18" 
-          height="18" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-        </button>
+        {isOwner && (
+          <button
+            title="Delete"
+            onClick={handleDelete}
+            className="p-1.5 text-gray-600 hover:text-red-400 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

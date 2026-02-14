@@ -6,7 +6,7 @@ const Syntax = require('../models/Syntax');
 // @access  Private
 const getSnippets = async (req, res) => {
   try {
-    const snippets = await Snippet.find({ user: req.user.id })
+    const snippets = await Snippet.find({})
       .populate('user', 'name email')
       .populate('syntax');
     res.status(200).json(snippets);
@@ -27,11 +27,6 @@ const getSnippetById = async (req, res) => {
     if (!snippet) {
       res.status(404);
       throw new Error('Snippet not found');
-    }
-
-    if (snippet.user.toString() !== req.user.id) {
-      res.status(401);
-      throw new Error('User not authorized');
     }
 
     res.status(200).json(snippet);
@@ -93,7 +88,10 @@ const updateSnippet = async (req, res) => {
       throw new Error('Snippet not found');
     }
 
-    if (snippet.user.toString() !== req.user.id) {
+    const isOwner = snippet.user.toString() === req.user.id;
+    const isOnlyFavoriting = Object.keys(req.body).length === 1 && req.body.hasOwnProperty('isFavorite');
+
+    if (!isOwner && !isOnlyFavoriting) {
       res.status(401);
       throw new Error('User not authorized');
     }

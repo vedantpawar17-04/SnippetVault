@@ -1,1 +1,37 @@
 @import "tailwindcss";
+
+body {
+  overflow: hidden;
+}
+
+/* Scrollbar width */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+/* Scrollbar Track */
+::-webkit-scrollbar-track {
+    background: #0F172A;
+    /* same as your input background */
+}
+
+/* Scrollbar Thumb */
+::-webkit-scrollbar-thumb {
+    background: #7C3AED;
+    /* violet-600 */
+    border-radius: 8px;
+    border: 2px solid #0F172A;
+}
+
+/* Scrollbar Thumb Hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #8B5CF6;
+    /* violet-500 */
+}
+
+/* Firefox Support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #7C3AED #0F172A;
+}

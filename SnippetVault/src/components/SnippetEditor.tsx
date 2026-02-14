@@ -1,246 +1,196 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { Snippet } from '../types';
-import { useSnippets } from '../context/SnippetContext';
-import '../styles/scrollbar.css';
+import React, { useEffect } from "react";
+import type { Snippet } from "../types";
+import { useSnippets } from "../context/SnippetContext";
+import { useSnippetForm } from "../hooks/useSnippetForm";
+import SnippetMetaPanel from "./SnippetMetaPanel";
+import "../index.css";
 
-interface SnippetEditorProps {
+interface Props {
   snippet?: Snippet;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const LANGUAGES = [
-  'React',
-  'TypeScript',
-  'JavaScript',
-  'HTML',
-  'CSS',
-  'Python',
-  'Go',
-  'Rust',
-  'JSON',
-  'Markdown',
-];
-
-const SnippetEditor: React.FC<SnippetEditorProps> = ({ snippet, isOpen, onClose }) => {
+const SnippetEditor: React.FC<Props> = ({
+  snippet,
+  isOpen,
+  onClose,
+}) => {
   const { addSnippet, updateSnippet } = useSnippets();
-  const modalRef = useRef<HTMLDivElement>(null);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    language: 'JavaScript',
-    code: '',
-    tagsString: '',
-    isFavorite: false,
-    interviewAnswer: '',
-    syntax: '',
-  });
+  const {
+    formData,
+    setFormData,
+    errors,
+    validate,
+    getFormattedData,
+  } = useSnippetForm(snippet, isOpen);
 
-  const [error, setError] = useState<string | null>(null);
+  const handleSubmit = async () => {
+    if (!validate()) return;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (snippet) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFormData({
-        title: snippet.title,
-        language: snippet.language,
-        code: snippet.code,
-        tagsString: snippet.tags.join(', '),
-        isFavorite: snippet.isFavorite,
-        interviewAnswer: snippet.interviewAnswer || '',
-        syntax: snippet.syntax ? (typeof snippet.syntax === 'string' ? snippet.syntax : snippet.syntax.name) : '',
-      });
-    } else {
-      setFormData({
-        title: '',
-        language: 'JavaScript',
-        code: '',
-        tagsString: '',
-        isFavorite: false,
-        interviewAnswer: '',
-        syntax: '',
-      });
-    }
-    setError(null);
-  }, [snippet, isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!formData.title.trim() || !formData.code.trim() || !formData.interviewAnswer.trim()) {
-      setError('Title, Code and Interview Answer are required.');
-      return;
-    }
-
-    const data = {
-      title: formData.title.trim(),
-      language: formData.language,
-      code: formData.code.trim(),
-      tags: formData.tagsString.split(',').map(t => t.trim()).filter(Boolean),
-      isFavorite: formData.isFavorite,
-      interviewAnswer: formData.interviewAnswer.trim(),
-      syntax: formData.syntax.trim(),
-    };
+    const data = getFormattedData();
 
     try {
       if (snippet) {
-         await updateSnippet(snippet.id, data);
+        await updateSnippet(snippet.id, data);
       } else {
-         await addSnippet(data);
+        await addSnippet(data);
       }
+
       onClose();
-    } catch (err) {
-      setError('Failed to save snippet');
-      console.error(err);
+    } catch (error) {
+      console.error("Error saving snippet:", error);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" ref={modalRef}>
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+  /* ✅ Scroll Lock Fix */
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
 
-      {/* Modal */}
-      <div className="relative w-full max-w-6xl h-full sm:h-[90vh] bg-[#020617] border border-white/10 rounded-none sm:rounded-2xl flex flex-col overflow-hidden">
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [isOpen]);
+
+  /* Keyboard Shortcuts */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSubmit();
+      }
+
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener("keydown", handler);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handler);
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#020617] overflow-y-auto">
+      <div className="min-h-screen max-w-7xl mx-auto px-6 py-8">
 
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <div>
-            <h2 className="text-xl font-semibold text-white">
-              {snippet ? 'Edit Snippet' : 'Create Snippet'}
-            </h2>
-            <p className="text-sm text-gray-400">
-              Save and organize your logic for future use.
-            </p>
-          </div>
+        <header className="sticky top-0 z-10 bg-[#020617] border-b border-white/10 pb-4 mb-8 flex justify-between items-center">
+          <h2 className="text-2xl font-semibold text-white">
+            {snippet ? "Edit Snippet" : "Create Snippet"}
+          </h2>
 
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white border border-white/10"
+              className="px-4 py-2 text-gray-400 border border-white/10 rounded-lg hover:bg-white/5"
             >
               Cancel
             </button>
+
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 transition"
+              className="px-6 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg font-semibold text-white"
             >
-              {snippet ? 'Update Snippet' : 'Save Snippet'}
+              Save
             </button>
           </div>
         </header>
 
-        {error && (
-          <div className="px-6 py-2 text-sm text-red-400 border-b border-red-500/20">
-            {error}
-          </div>
-        )}
+        <div className="flex flex-col lg:flex-row gap-10">
 
-        {/* Body */}
-        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-6 p-6 scroll-area">
+          {/* LEFT SIDE */}
+          <div className="flex-1 space-y-8">
 
-          {/* Left */}
-          <div className="flex flex-col flex-1 gap-6 overflow-hidden">
-
-            {/* Syntax Input */}
+            {/* Syntax */}
             <div>
-               <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Syntax</label>
-               <input
-                 value={formData.syntax}
-                 onChange={e => setFormData({ ...formData, syntax: e.target.value })}
-                 className="w-full bg-[#0F172A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500/50 transition-colors placeholder-gray-600"
-                 placeholder="Write the proper syntax here so others get the idea."
-               />
+              <label className="block text-sm text-gray-400 mb-2">
+                Syntax
+              </label>
+              <textarea
+                value={formData.syntax}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    syntax: e.target.value,
+                  })
+                }
+                className="w-full min-h-[120px] bg-[#0F172A] border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-violet-600"
+                placeholder="Describe syntax or short usage example..."
+              />
+              {errors.syntax && (
+                <p className="text-red-400 text-sm mt-2">
+                  {errors.syntax}
+                </p>
+              )}
             </div>
 
-            {/* Code Editor */}
-            <div className="flex flex-col flex-1 border border-white/10 rounded-xl overflow-hidden">
-              <div className="px-4 py-2 text-xs font-semibold text-gray-400 border-b border-white/10">
+            {/* Code */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
                 Example Code
-              </div>
+              </label>
               <textarea
                 value={formData.code}
-                onChange={e => setFormData({ ...formData, code: e.target.value })}
-                className="flex-1 bg-transparent px-4 py-4 text-sm text-slate-200 resize-none focus:outline-none scroll-area"
-                placeholder="// Paste your code here..."
-                spellCheck={false}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    code: e.target.value,
+                  })
+                }
+                className="w-full min-h-[400px] bg-[#0F172A] border border-white/10 rounded-lg px-4 py-4 text-slate-200 font-mono focus:outline-none focus:ring-2 focus:ring-violet-600"
+                placeholder="// Write your code here..."
               />
+              {errors.code && (
+                <p className="text-red-400 text-sm mt-2">
+                  {errors.code}
+                </p>
+              )}
             </div>
 
-            {/* Interview Answer */}
-            <div className="border border-white/10 rounded-xl overflow-hidden">
-              <div className="px-4 py-2 text-xs font-semibold text-gray-400 border-b border-white/10">
+            {/* Explanation */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
                 Explanation
-              </div>
+              </label>
               <textarea
                 value={formData.interviewAnswer}
-                onChange={e => setFormData({ ...formData, interviewAnswer: e.target.value })}
-                className="w-full bg-transparent px-4 py-3 text-sm text-slate-300 resize-none focus:outline-none min-h-[90px] scroll-area"
-                placeholder="Explain the logic clearly for interviews..."
-                spellCheck={false}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    interviewAnswer: e.target.value,
+                  })
+                }
+                className="w-full min-h-[200px] bg-[#0F172A] border border-white/10 rounded-lg px-4 py-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-600"
+                placeholder="Explain how this snippet works..."
               />
+              {errors.interviewAnswer && (
+                <p className="text-red-400 text-sm mt-2">
+                  {errors.interviewAnswer}
+                </p>
+              )}
             </div>
+
           </div>
 
-          {/* Right Sidebar */}
-          <aside className="w-full lg:w-80 flex flex-col gap-5 overflow-y-auto scroll-area">
+          {/* RIGHT SIDE */}
+          <SnippetMetaPanel
+            formData={formData}
+            setFormData={setFormData}
+            errors={errors}
+          />
 
-            <div className="border border-white/10 rounded-xl p-5 space-y-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Snippet Title</label>
-                <input
-                  value={formData.title}
-                  onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-                  placeholder="Express JSON Body Parser"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Language</label>
-                <select
-                  title='Language selection'
-                  value={formData.language}
-                  onChange={e => setFormData({ ...formData, language: e.target.value })}
-                  className="w-full bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-                >
-                  {LANGUAGES.map(lang => (
-                    <option key={lang} value={lang} className="bg-[#020617]">
-                      {lang}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Tags</label>
-                <input
-                  value={formData.tagsString}
-                  onChange={e => setFormData({ ...formData, tagsString: e.target.value })}
-                  className="w-full bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-                  placeholder="backend, express"
-                />
-              </div>
-            </div>
-
-            <div className="border border-white/10 rounded-xl p-4 text-sm text-gray-400">
-              <span className="text-violet-400 font-semibold">Pro Tip</span>
-              <p className="mt-1">
-                Always include a clear interview explanation. It helps you revise faster before interviews.
-              </p>
-            </div>
-          </aside>
         </div>
       </div>
     </div>
