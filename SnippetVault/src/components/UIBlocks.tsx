@@ -1,6 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import UIBlockModal from './UIBlockModal';
+import { useSnippets } from '../context/SnippetContext';
+import SnippetCard from './SnippetCard';
 
 export interface UIBlock {
   id: string;
@@ -125,6 +127,25 @@ const BLOCKS_DATA: UIBlock[] = [
 
 const UIBlocks: React.FC = () => {
   const [selectedBlock, setSelectedBlock] = useState<UIBlock | null>(null);
+  const { snippets } = useSnippets();
+
+  // Find snippets in vault that look like UI components
+  const similarVaultSnippets = useMemo(() => {
+    return snippets.filter(s => {
+      const isReact = s.language.toLowerCase().includes('react') || 
+                     s.language.toLowerCase().includes('typescript') ||
+                     s.language.toLowerCase().includes('javascript');
+      
+      const hasUIStructure = (s.codeStructure?.hooks?.length ?? 0) > 0 || 
+                            s.codeStructure?.imports?.some(i => i.toLowerCase().includes('react'));
+      
+      const hasUITags = s.tags.some(t => 
+        ['ui', 'component', 'button', 'navbar', 'modal', 'layout', 'tailwind'].includes(t.toLowerCase())
+      );
+
+      return isReact && (hasUIStructure || hasUITags);
+    }).slice(0, 3);
+  }, [snippets]);
 
   const renderSection = (title: string, type: UIBlock['type']) => {
     const blocks = BLOCKS_DATA.filter(b => b.type === type);
@@ -172,6 +193,26 @@ const UIBlocks: React.FC = () => {
       {renderSection('Setup Blocks', 'setup')}
       {renderSection('Component Blocks', 'component')}
       {renderSection('Templates', 'template')}
+
+      {/* Enhancement: Similar Snippets from Vault */}
+      {similarVaultSnippets.length > 0 && (
+        <div className="pt-8 mb-16 border-t border-white/5">
+          <h2 className="text-2xl font-black text-violet-400 flex items-center gap-3 mb-8">
+            <span className="w-2 h-8 bg-violet-600 rounded-full"></span>
+            Similar Snippets from Your Vault
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {similarVaultSnippets.map(snippet => (
+              <SnippetCard 
+                key={snippet.id} 
+                snippet={snippet} 
+                onEdit={() => {}} 
+                onView={() => {}} 
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {selectedBlock && (
         <UIBlockModal 

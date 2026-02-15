@@ -37,6 +37,16 @@ const snippetSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    codeStructure: {
+      functions: [String],
+      hooks: [String],
+      asyncPatterns: [String],
+      loops: [String],
+      conditionals: [String],
+      imports: [String],
+      returns: [String],
+    },
+    syntaxTokens: [String],
   },
   {
     timestamps: true,

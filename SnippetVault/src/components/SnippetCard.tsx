@@ -102,6 +102,22 @@ const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit, onView }) =>
           <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent opacity-60"></div>
         </div>
 
+        {/* Structural Badges */}
+        {(snippet.codeStructure?.hooks.length || snippet.codeStructure?.asyncPatterns.length) ? (
+          <div className="flex flex-wrap gap-1.5">
+            {snippet.codeStructure.hooks.slice(0, 2).map(hook => (
+              <span key={hook} className="text-[8px] px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                {hook}
+              </span>
+            ))}
+            {snippet.codeStructure.asyncPatterns.slice(0, 2).map(pattern => (
+              <span key={pattern} className="text-[8px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                {pattern === 'async' || pattern === 'await' ? 'async/await' : pattern}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         {/* User + Actions */}
         <div className="pt-3 border-t border-white/5 flex flex-col gap-2">
           {snippet.user &&
@@ -133,6 +149,20 @@ const SnippetCard: React.FC<SnippetCardProps> = ({ snippet, onEdit, onView }) =>
                     strokeLinejoin="round">
                       <path d="
                       M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.505 4.044 3 5.5L12 21l7-7z"></path>
+                    </svg>
+                  </button>
+
+                  <button
+                    title="View Details"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onView(snippet);
+                    }}
+                    className="p-1 text-gray-500 hover:text-white transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                   </button>
 

@@ -5,8 +5,8 @@ import SnippetCard from "../components/SnippetCard";
 import SnippetEditor from "../components/SnippetEditor";
 import SnippetViewCard from "../components/SnippetViewCard";
 import UIBlocks from "../components/UIBlocks";
+import Sidebar from "../components/Sidebar";
 import type { Snippet } from "../types";
-import { Link } from "react-router-dom";
 import "../index.css";
 
 const Dashboard: React.FC = () => {
@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<
-    "all" | "favorites" | "ui-blocks"
+    "all" | "favorites" | "ui-blocks" | "similar"
   >("all");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | undefined>(
@@ -46,6 +46,7 @@ const Dashboard: React.FC = () => {
 
         const matchesFilter =
           activeFilter === "all" ||
+          activeFilter === "similar" ||
           (activeFilter === "favorites" && s.isFavorite);
 
         return matchesSearch && matchesFilter;
@@ -55,6 +56,41 @@ const Dashboard: React.FC = () => {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
   }, [snippets, searchQuery, activeFilter]);
+
+  // Enhancement: Filter for unique snippets in "All Snippets" view
+  // and non-unique ones in "Similar Logic" view
+  const displaySnippets = useMemo(() => {
+    // 1. First, sort all snippets so my own come first (for deduplication priority)
+    const sorted = [...filteredSnippets].sort((a, b) => {
+      const isAOwner = (typeof a.user === 'object' ? (a.user as any)?._id || (a.user as any)?.id : a.user) === user?.id;
+      const isBOwner = (typeof b.user === 'object' ? (b.user as any)?._id || (b.user as any)?.id : b.user) === user?.id;
+      
+      if (isAOwner && !isBOwner) return -1;
+      if (!isAOwner && isBOwner) return 1;
+      
+      // Secondary sort by date
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const seen = new Set<string>();
+    const unique: Snippet[] = [];
+    const duplicates: Snippet[] = [];
+
+    sorted.forEach((s) => {
+      // Normalize code to check for uniqueness (remove whitespace)
+      const normalized = s.code.replace(/\s+/g, "").toLowerCase();
+      if (seen.has(normalized)) {
+        duplicates.push(s);
+      } else {
+        seen.add(normalized);
+        unique.push(s);
+      }
+    });
+
+    if (activeFilter === "all") return unique;
+    if (activeFilter === "similar") return duplicates;
+    return filteredSnippets; // Fallback for favorites/ui-blocks
+  }, [filteredSnippets, activeFilter, user]);
 
   const handleEdit = (snippet: Snippet) => {
     setEditingSnippet(snippet);
@@ -72,86 +108,46 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#030712] relative overflow-x-hidden">
-      {/* Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 w-70 border-r border-white/5 flex flex-col bg-[#030712] z-50 transition-transform duration-300 transform ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
-      >
-        <div className="p-8 pb-10 flex items-center justify-between shrink-0">
-          <Link
-            className="text-xl font-black text-white tracking-tighter"
-            to="/"
-          >
-            SnippetVault
-          </Link>
-          <button
-            className="lg:hidden text-gray-500 hover:text-white"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            ✕
-          </button>
-        </div>
-
-        <nav className="flex-grow px-4 space-y-2 overflow-y-auto">
-          {[
-            { id: "all", label: "All Snippets" },
-            { id: "favorites", label: "Favorites" },
-            { id: "ui-blocks", label: "UI Blocks" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveFilter(item.id as any);
-                setIsSidebarOpen(false);
-              }}
-              className={`w-full text-left px-6 py-4 rounded-2xl font-bold text-sm transition ${
-                activeFilter === item.id
-                  ? "bg-white/5 text-white"
-                  : "text-gray-500 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="p-5 border-t border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              {user?.name?.charAt(0).toUpperCase()}
-            </div>
-
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm text-white truncate">{user?.name}</span>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)}
+        activeFilter={activeFilter}
+        setActiveFilter={setActiveFilter}
+        user={user}
+      />
 
       {/* Main Content */}
       <main className="flex-grow lg:ml-72 p-6 sm:p-8 lg:p-12 min-h-screen flex flex-col">
         {/* Header */}
         <header className="flex flex-col md:flex-row justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-2xl font-black text-white">
-              {activeFilter === "ui-blocks"
-                ? "UI Blocks Library"
-                : "SnippetVault Dashboard"}
-            </h1>
-            <p className="text-gray-500">
-              {activeFilter === "ui-blocks"
-                ? "Rapid design patterns for React + Tailwind."
-                : "Your personal library of reusable logic."}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Hamburger Button for Mobile */}
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 text-gray-400 hover:text-white bg-white/5 rounded-xl transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-2xl font-black text-white text-wrap">
+                {activeFilter === "ui-blocks"
+                  ? "UI Blocks Library"
+                  : activeFilter === "similar"
+                  ? "Structurally Similar Snippets"
+                  : "SnippetVault Dashboard"}
+              </h1>
+              <p className="text-gray-500">
+                {activeFilter === "ui-blocks"
+                  ? "Rapid design patterns for React + Tailwind."
+                  : activeFilter === "similar"
+                  ? "Logic patterns with shared structural elements."
+                  : "Your personal library of unique logic."}
+              </p>
+            </div>
           </div>
 
           {activeFilter !== "ui-blocks" && (
@@ -179,7 +175,7 @@ const Dashboard: React.FC = () => {
             <UIBlocks />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredSnippets.map((snippet) => (
+              {displaySnippets.map((snippet) => (
                 <SnippetCard
                   key={snippet.id}
                   snippet={snippet}
@@ -188,7 +184,7 @@ const Dashboard: React.FC = () => {
                 />
               ))}
 
-              {filteredSnippets.length === 0 && (
+              {displaySnippets.length === 0 && (
                 <div className="col-span-full text-center py-20 text-gray-500">
                   No matches found in your vault
                 </div>

@@ -20,6 +20,18 @@ export interface Snippet {
   updatedAt?: number | string;
   interviewAnswer: string;
   syntax: string | { _id: string; name: string };
+  codeStructure?: {
+    functions: string[];
+    hooks: string[];
+    asyncPatterns: string[];
+    loops: string[];
+    conditionals: string[];
+    imports: string[];
+    returns: string[];
+  };
+  syntaxTokens?: string[];
+  matchedTokens?: string[]; // For UI display
+  relevanceScore?: number;
 }
 
 export type AuthContextType = {

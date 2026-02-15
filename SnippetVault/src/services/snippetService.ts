@@ -31,3 +31,8 @@ export const createUpdatedSnippet = async (originalSnippetId: string, snippetDat
   const response = await api.post('/updated-snippets', { ...snippetData, originalSnippetId });
   return response.data;
 };
+
+export const getSimilarSnippets = async (id: string) => {
+  const response = await api.get(`${API_URL}/${id}/similar`);
+  return response.data;
+};
